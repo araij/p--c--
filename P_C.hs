@@ -79,7 +79,7 @@ pProc = spaces >> (SProc `liftM` pExp)
 pExp :: Parser String
 pExp = manyTill1 anyChar (lookAhead (try expEnd))
   where
-    expEnd = try pThen <|> try pDo <|> try (lineSpaces >> eol) <|> (lineSpaces >> eof)
+    expEnd = try pThen <|> try pDo <|> try (spacesLn >> eol) <|> (spacesLn >> eof)
 
 --
 -- matches "\n\s+<string>\s+"
@@ -99,7 +99,7 @@ lineTail :: String -> Parser String
 lineTail t = do
   space1
   s <- string t
-  lineSpaces
+  spacesLn
   lookAhead (eol <|> eof)
   return s
 
