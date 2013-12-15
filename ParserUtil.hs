@@ -1,6 +1,7 @@
 module ParserUtil where
 
 import Control.Monad (liftM, void)
+import Control.Applicative ((<$), (<$>))
 import Text.Parsec (oneOf, char, string, noneOf, (<|>), parse, try, many, many1, space, spaces, eof, endBy)
 import Text.Parsec.String (Parser)
 

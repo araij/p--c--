@@ -26,16 +26,15 @@ import Debug.Trace (trace)
 -- expression ::= ("([^\n])\\\n\s*" ==> \1) ++ expression
 --              | ("([^\n])\\\n" ==> \1)
 
-
 data P_CProg = P_CProg [Stat]
-  deriving (Show)
+  deriving (Show, Eq)
 
 data Stat = SIfThen String [Stat]
           | SIfThenElse String [Stat] [Stat]
 	  | SWhile String [Stat]
 	  | SRepeat [Stat] String
 	  | SProc String
-  deriving (Show)
+  deriving (Show, Eq)
 
 parseP_C :: String -> Either ParseError P_CProg
 parseP_C = parse pP_CProg "P--C-- Program" . ('\n' :)
@@ -49,14 +48,30 @@ pP_CProg = do
 
 pStat :: Parser Stat
 pStat = try pIfThen
+    <|> try pWhileDo
+    <|> try pRepeatUntil
     <|> pProc
 
 pIfThen :: Parser Stat
 pIfThen = do
-  rem <- lookAhead $ many anyChar
-  e   <- between pIf pThen pExp
-  ss  <- manyTill pStat (try pEnd)
-  return $ SIfThen e ss
+  cond <- between pIf pThen pExp
+  yes  <- manyTill pStat $ lookAhead (try pElse <|> try pEnd)
+  (SIfThen cond yes <$ try pEnd) <|> (SIfThenElse cond yes `liftM` elseClause)
+  where
+    elseClause = pElse >> manyTill pStat (try pEnd)
+
+pWhileDo :: Parser Stat
+pWhileDo = do
+  cond <- between pWhile pDo pExp
+  ss   <- manyTill pStat $ try pEnd
+  return $ SWhile cond ss
+
+pRepeatUntil :: Parser Stat
+pRepeatUntil = do
+  pRepeat
+  ss   <- manyTill pStat $ try pUntil
+  cond <- pExp
+  return $ SRepeat ss cond
 
 pProc :: Parser Stat
 pProc = spaces >> (SProc `liftM` pExp)
@@ -99,6 +114,18 @@ pIf = void $ lineHead "if"
 
 pThen :: Parser ()
 pThen = void $ lineTail "then"
+
+pElse :: Parser ()
+pElse = void $ lineHead "else"
+
+pWhile :: Parser ()
+pWhile = void $ lineHead "while"
+
+pRepeat :: Parser ()
+pRepeat = void $ lineHead "repeat"
+
+pUntil :: Parser ()
+pUntil = void $ lineHead "until"
 
 pDo :: Parser ()
 pDo = void $ lineTail "do"
