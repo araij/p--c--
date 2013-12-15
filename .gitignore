@@ -1,0 +1,8 @@
+Test
+.*.swp
+.*.swo
+*.o
+*.hi
+*.upc
+*.dot
+
