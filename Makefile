@@ -1,31 +1,27 @@
 EXEC     = Test
-HS_FLAGS = -Wall
+HSFLAGS = -Wall
 SRCS     = $(wildcard *.hs)
 
 all: $(EXEC)
 
 clean:
-	$(RM) $(SRCS:.hs=.o)
-
+	$(RM) $(SRCS:.hs=.o) $(SRCS:.hs=.hi)
 
 depend:
-	ghc $(HS_FLAGS) -M $(EXEC)
-
-%.hi: %.hs
-	$(RM) $@
-	ghc $(HS_FLAGS) -c -o $@ $<
+	ghc $(HSFLAGS) -M $(EXEC)
 
 %.o: %.hs
 	$(RM) $@
-	ghc $(HS_FLAGS) -c -o $@ $<
-
+	ghc $(HSFLAGS) -c $<
+%.hi: %.hs %.o
+	$(RM) $@
+	ghc $(HSFLAGS) -c $<
 %: %.o
-	ghc $(HS_FLAGS) --make -o $@ $(basename $<)
+	ghc $(HSFLAGS) --make $@
 
 # DO NOT DELETE: Beginning of Haskell dependencies
-Upc.o : Upc.hs
 Dot.o : Dot.hs
-Dot.o : Upc.hi
+Upc.o : Upc.hs
 UpcToDot.o : UpcToDot.hs
 UpcToDot.o : Dot.hi
 UpcToDot.o : Upc.hi

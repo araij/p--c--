@@ -13,7 +13,7 @@ upcPatentConfig :: UpcConfig
 upcPatentConfig = UpcConfig { ucRelabel = Just patentLabel }
 
 patentLabel :: Int -> String -> String
-patentLabel ix l = printf "S%05d: %s" ix l
+patentLabel ix l = printf "S%04d: %s" (ix * 100) l
 
 upcToDigraph :: UpcConfig -> Upc -> Digraph
 upcToDigraph cfg (Upc steps) =
@@ -23,7 +23,7 @@ upcToDigraph cfg (Upc steps) =
       nstart        = Node "start" (nodeAttr0 { naLabel = Just "Start" })
       nend          = Node (ixToNodeName (length steps)) (nodeAttr0 { naLabel = Just "End" })
       estart        = Edge "start" (ixToNodeName 0) edgeAttr0
-  in Digraph "flowchart" [] (nstart : ns ++ [nend]) (estart : es) digraphAttr0
+  in Digraph "flowchart" [] (nstart : ns' ++ [nend]) (estart : es) digraphAttr0
 
 addStepID :: (Int -> String -> String) -> [Node] -> [Node]
 addStepID f ns =
@@ -38,7 +38,7 @@ locate (Step lab st, ix) (ns, m) =
   in (n : ns, m')
 
 connect :: M.Map String Int -> (Step, Int) -> [Edge]
-connect lab2nix (Step _ (Statement yes no act), ix) =
+connect lab2nix (Step _ (Statement yes no _), ix) =
   let here    = ixToNodeName ix
       mey     = fmap (\l -> Edge here (node_name l) (edgeAttr0 { eaLabel = Just "Yes" })) yes
       men     = fmap (\l -> Edge here (node_name l) (edgeAttr0 { eaLabel = Just "No"  })) no

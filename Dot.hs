@@ -3,7 +3,6 @@ module Dot where
 import Data.List (intersperse)
 import Data.Maybe (catMaybes)
 import Data.Char (toLower)
-import Upc
 
 data Digraph = Digraph String [Subgraph] [Node] [Edge] DigraphAttr
   deriving (Show)

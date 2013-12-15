@@ -1,12 +1,9 @@
 module Upc where
 
-import Control.Applicative ((<$>), (*>), (<*), pure)
 import Control.Monad (liftM, void)
-import Text.Parsec (char, string, noneOf, anyChar, (<|>), parse, try, many, space, spaces,
-                    skipMany, eof, ParsecT, endBy)
+import Text.Parsec (char, string, noneOf, (<|>), parse, try, many, space, spaces, eof, endBy)
 import Text.Parsec.String (Parser)
 import Text.Parsec.Error (ParseError)
-import Text.Parsec.Combinator (sepBy)
 
 data Upc = Upc [Step]
   deriving (Show)
@@ -45,7 +42,7 @@ step = try (Step Nothing `liftM` branchStatement)
 labeledStep :: Parser Step
 labeledStep = do
   l <- label
-  char ':'
+  void $ char ':'
   spaces
   s <- statement
   return $ Step (Just l) s
@@ -61,33 +58,33 @@ branchStatement = try ifStatement
 
 ifStatement :: Parser Statement
 ifStatement = do
-  string "__GOTO_IF__"
+  void $ string "__GOTO_IF__"
   space1
   yes <- label
-  char ':'
+  void $ char ':'
   spaces
   act <- action
   return $ Statement (Just yes) Nothing act
 
 unlessStatement :: Parser Statement
 unlessStatement = do
-  string "__GOTO_UNLESS__"
+  void $ string "__GOTO_UNLESS__"
   space1
   no <- label
-  char ':'
+  void $ char ':'
   spaces
   act <- action
   return $ Statement Nothing (Just no) act
 
 whicheverStatement :: Parser Statement
 whicheverStatement = do
-  string "__GOTO__"
+  void $ string "__GOTO__"
   space1
   yes <- label
-  char ':'
+  void $ char ':'
   spaces
   no  <- label
-  char ':'
+  void $ char ':'
   spaces
   act <- action
   return $ Statement (Just yes) (Just no) act
