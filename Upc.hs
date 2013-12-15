@@ -1,9 +1,10 @@
 module Upc where
 
 import Control.Monad (liftM, void)
-import Text.Parsec (char, string, noneOf, (<|>), parse, try, many, space, spaces, eof, endBy)
+import Text.Parsec (char, string, noneOf, (<|>), parse, try, many, many1, space, spaces, eof, endBy)
 import Text.Parsec.String (Parser)
 import Text.Parsec.Error (ParseError)
+import ParserUtil
 
 data Upc = Upc [Step]
   deriving (Show)
@@ -97,16 +98,4 @@ action = many1 (noneOf "\r\n")
 
 label :: Parser String
 label = many (noneOf ":\r\n")
-
-eol :: Parser ()
-eol = void $ try (string "\n\r") <|> try (string "\r\n") <|> string "\n" <|> string "\r"
-
-space1 :: Parser ()
-space1 = void $ space >> spaces
-
-many1 :: Parser a -> Parser [a]
-many1 p = do
-  x  <- p
-  xs <- many p
-  return $ x:xs
 
