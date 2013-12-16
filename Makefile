@@ -1,27 +1,29 @@
-EXEC     = Test
+EXECS   = Test
 HSFLAGS = -Wall
-SRCS     = $(wildcard *.hs)
+SRCS    = $(wildcard *.hs)
 
-all: $(EXEC)
+all: $(EXECS)
+
+$(EXECS): %: %.o
+	ghc $(HSFLAGS) --make $@
 
 clean:
 	$(RM) $(SRCS:.hs=.o) $(SRCS:.hs=.hi)
 
 depend:
-	ghc $(HSFLAGS) -M $(EXEC)
+	ghc $(HSFLAGS) -M $(EXECS)
 
 %.o: %.hs
 	$(RM) $@
-	ghc $(HSFLAGS) -c $<
 %.hi: %.hs %.o
 	$(RM) $@
 	ghc $(HSFLAGS) -c $<
-%: %.o
-	ghc $(HSFLAGS) --make $@
 
 # DO NOT DELETE: Beginning of Haskell dependencies
+ParserUtil.o : ParserUtil.hs
 Dot.o : Dot.hs
 Upc.o : Upc.hs
+Upc.o : ParserUtil.hi
 UpcToDot.o : UpcToDot.hs
 UpcToDot.o : Dot.hi
 UpcToDot.o : Upc.hi
