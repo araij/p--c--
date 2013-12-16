@@ -40,9 +40,9 @@ locate (SLabel l) (ix, ns, m) =
   let m' = M.insert l topLabel m
   in (ix, ns, m')
   where
-    topLabel | (Node _ NodeAttr {naLabel = Just s} : _) <- ns = s
-             | []                                       <- ns = "end"
-             | otherwise                                      = error $ "topLabel: " ++ show ns
+    topLabel | (Node s _ : _) <- ns = s
+             | []             <- ns = "end"
+             | otherwise            = error $ "topLabel: " ++ show ns
 
 connect :: M.Map String String -> Stat -> (Int, [Edge]) -> (Int, [Edge])
 connect _    (SLabel _)        acc      = acc

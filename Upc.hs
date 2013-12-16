@@ -1,7 +1,7 @@
 module Upc where
 
 import Control.Monad (void)
-import Text.Parsec (anyChar, string, (<|>), parse, try, spaces, eof, endBy)
+import Text.Parsec (many, anyChar, string, (<|>), parse, try, spaces, eof)
 import Text.Parsec.String (Parser)
 import Text.Parsec.Error (ParseError)
 import ParserUtil
@@ -41,7 +41,7 @@ parseUpc = parse upcSrc "Unstructured P--C--"
 upcSrc :: Parser UpcProg
 upcSrc = do
   spaces
-  stats <- pStat `endBy` trail
+  stats <- many pStat
   return $ UpcProg stats
 
 trail :: Parser ()
@@ -96,10 +96,10 @@ pFall = do
   return $ SBranch p Nothing Nothing
 
 pLabel :: Parser String
-pLabel = manyTill1 anyChar trail
+pLabel = manyTill1 anyChar (try trail)
 
 pProc :: Parser String
-pProc = manyTill1 anyChar trail
+pProc = manyTill1 anyChar (try trail)
 
 --statement :: Parser Stat
 --statement = try branchStatement
