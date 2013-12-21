@@ -6,10 +6,11 @@ import Text.Parsec.String (Parser)
 import Text.Parsec.Error (ParseError)
 import ParserUtil
 
-data UpcProg = UpcProg [Stat]
+data UpcProg = UpcProg [Stmt]
   deriving (Show)
 
-data Stat = SBranch String (Maybe String) (Maybe String)
+data Stmt = SBranch String (Maybe String) (Maybe String)
+          | SGoto String
           | SLabel String
   deriving (Show)
 
@@ -26,10 +27,10 @@ data Stat = SBranch String (Maybe String) (Maybe String)
 -- whichever_statement ::= "__GOTO__" label "__OR__" label "__BY__" procedure
 -- label               ::= [^\r\n]+
 
---data Step = Step (Maybe String) Stat
+--data Step = Step (Maybe String) Stmt
 --  deriving (Show)
 --
---data Stat = Stat (Maybe String) (Maybe String) String
+--data Stmt = Stmt (Maybe String) (Maybe String) String
 --  deriving (Show)
 
 --parseUpc :: String -> Either ParseError UpcProg
@@ -47,40 +48,40 @@ upcSrc = do
 trail :: Parser ()
 trail = spacesLn >> (eof <|> (eol >> spaces))
 
-pStat :: Parser Stat
+pStat :: Parser Stmt
 pStat = try pLabelDef
     <|> try pBranch
     <|> pFall
 
-pLabelDef :: Parser Stat
+pLabelDef :: Parser Stmt
 pLabelDef = do
   void $ string "__LABEL__"
   spaces
   l <- pLabel
   return $ SLabel l
 
-pBranch :: Parser Stat
+pBranch :: Parser Stmt
 pBranch = do
   void $ string "__GOTO__"
   spaces
   l <- pLabel
   try (pGotoIf l) <|> try (pGotoUnless l) <|> pGotoOrBy l
 
-pGotoIf :: String -> Parser Stat
+pGotoIf :: String -> Parser Stmt
 pGotoIf lab = do
   void $ string "__IF__" 
   spaces
   p <- pProc
   return $ SBranch p (Just lab) Nothing
 
-pGotoUnless :: String -> Parser Stat
+pGotoUnless :: String -> Parser Stmt
 pGotoUnless lab = do
   void $ string "__UNLESS__"
   spaces
   p <- pProc
   return $ SBranch p Nothing (Just lab)
 
-pGotoOrBy :: String -> Parser Stat
+pGotoOrBy :: String -> Parser Stmt
 pGotoOrBy ylab = do
   void $ string "__OR__"
   spaces
@@ -90,7 +91,7 @@ pGotoOrBy ylab = do
   p <- pProc
   return $ SBranch p (Just ylab) (Just nlab)
 
-pFall :: Parser Stat
+pFall :: Parser Stmt
 pFall = do
   p <- pProc
   return $ SBranch p Nothing Nothing
@@ -101,16 +102,16 @@ pLabel = manyTill1 anyChar (try trail)
 pProc :: Parser String
 pProc = manyTill1 anyChar (try trail)
 
---statement :: Parser Stat
+--statement :: Parser Stmt
 --statement = try branchStatement
 --        <|> fallStatement
 --
---branchStatement :: Parser Stat
+--branchStatement :: Parser Stmt
 --branchStatement = try ifStatement
 --              <|> try unlessStatement
 --	      <|> whicheverStatement
 --
---ifStatement :: Parser Stat
+--ifStatement :: Parser Stmt
 --ifStatement = do
 --  void $ string "__GOTO_IF__"
 --  space1
@@ -120,7 +121,7 @@ pProc = manyTill1 anyChar (try trail)
 --  act <- action
 --  return $ Branch (Just yes) Nothing act
 --
---unlessStatement :: Parser Stat
+--unlessStatement :: Parser Stmt
 --unlessStatement = do
 --  void $ string "__GOTO_UNLESS__"
 --  space1
@@ -130,7 +131,7 @@ pProc = manyTill1 anyChar (try trail)
 --  act <- action
 --  return $ Branch Nothing (Just no) act
 --
---whicheverStatement :: Parser Stat
+--whicheverStatement :: Parser Stmt
 --whicheverStatement = do
 --  void $ string "__GOTO__"
 --  space1
@@ -143,7 +144,7 @@ pProc = manyTill1 anyChar (try trail)
 --  act <- action
 --  return $ Branch (Just yes) (Just no) act
 --
---fallStatement :: Parser Stat
+--fallStatement :: Parser Stmt
 --fallStatement = Branch Nothing Nothing `liftM` action
 --
 --action :: Parser String

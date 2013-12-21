@@ -64,7 +64,7 @@ edgeToStr (Edge src dst attr) =
 
 edgeAttrToStr :: EdgeAttr -> String
 edgeAttrToStr attr =
-  let ms = [ fmap ("label = " ++) (eaLabel attr) ]
+  let ms = [ fmap (\s -> "label = \"" ++ s ++ "\"") (eaLabel attr) ]
   in case catMaybes ms of
       [] -> ""
       as -> "[ " ++ concat (intersperse ", " as) ++ " ]"
