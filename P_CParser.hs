@@ -8,23 +8,15 @@ import Text.Parsec.String (Parser)
 import Text.Parsec.Error (ParseError)
 import ParserUtil
 
--- p_c_program ::= (statement)+
--- statement   ::= if_statement
---               | while_statement
---               | repeat_statement
--- if_statement ::= if expression then (statement)+ else (statement)+ end
---                | if expression then (statement)+ end
--- while_statement ::= while expression do (statement)+ end
--- repeat_statement ::= repeat (statement)+ until expression
--- if         ::= "\n\s*if\s+"
--- then       ::= "\s+then\s*\n"
--- while      ::= "\n\s*while\s+"
--- repeat     ::= "\n\s*repeat\s*\n"
--- until      ::= "\n\s*until\s+"
--- do         ::= "\s+do\s*\n"
--- end        ::= "\n\s*end\s*\n"
--- expression ::= ("([^\n])\\\n\s*" ==> \1) ++ expression
---              | ("([^\n])\\\n" ==> \1)
+-- p_c_program ::= (<statement>)+
+-- statement   ::= <if_statement>
+--               | <while_statement>
+--               | <repeat_statement>
+--               | <expression>
+-- if_statement ::= if <expression> then (<statement>)+ else (<statement>)+ end
+--                | if <expression> then (<statement>)+ end
+-- while_statement ::= while <expression> do (<statement>)+ end
+-- repeat_statement ::= repeat (<statement>)+ until <expression>
 
 data P_CProg = P_CProg [Stmt]
   deriving (Show, Eq)
@@ -50,7 +42,7 @@ pStat :: Parser Stmt
 pStat = try pIfThen
     <|> try pWhileDo
     <|> try pRepeatUntil
-    <|> pProc
+    <|> SProc `liftM` pExp
 
 pIfThen :: Parser Stmt
 pIfThen = do
@@ -73,11 +65,8 @@ pRepeatUntil = do
   cond <- pExp
   return $ SRepeat ss cond
 
-pProc :: Parser Stmt
-pProc = spaces >> (SProc `liftM` pExp)
-
 pExp :: Parser String
-pExp = manyTill1 anyChar (lookAhead (try expEnd))
+pExp = spaces >> manyTill1 anyChar (lookAhead (try expEnd))
   where
     expEnd = try pThen <|> try pDo <|> try (spacesLn >> eol) <|> (spacesLn >> eof)
 
@@ -102,12 +91,6 @@ lineTail t = do
   spacesLn
   lookAhead (eol <|> eof)
   return s
-
-----
----- from http://d.hatena.ne.jp/kazu-yamamoto/20110131/1296466529
-----
---appear :: Parser a -> Parser [a]
---appear p = foldr ($) [] <$> many ((:) <$> try p <|> flip const <$> anyChar)
 
 pIf :: Parser ()
 pIf = void $ lineHead "if"

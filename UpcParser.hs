@@ -17,24 +17,15 @@ data Stmt = SBranch String (Maybe String) (Maybe String)
 -- upc_program         ::= statement "\n" (upc_program | ε)
 -- statement           ::= label_statement
 --                       | branch_statement
---                       | procedure
+--                       | expression
 -- label_statement     ::= "__LABEL__" label
 -- branch_statement    ::= if_statement
 --                       | unless_statement
 --                       | whichever_statement
--- if_statement        ::= "__GOTO__" label "__IF__" procedure
--- unless_statement    ::= "__GOTO__" label "__UNLESS__" procedure
--- whichever_statement ::= "__GOTO__" label "__OR__" label "__BY__" procedure
+-- if_statement        ::= "__GOTO__" label "__IF__" expression
+-- unless_statement    ::= "__GOTO__" label "__UNLESS__" expression
+-- whichever_statement ::= "__GOTO__" label "__OR__" label "__BY__" expression
 -- label               ::= [^\r\n]+
-
---data Step = Step (Maybe String) Stmt
---  deriving (Show)
---
---data Stmt = Stmt (Maybe String) (Maybe String) String
---  deriving (Show)
-
---parseUpc :: String -> Either ParseError UpcProg
---parseUpc = Right $ UpcProg []
 
 parseUpc :: String -> Either ParseError UpcProg
 parseUpc = parse upcSrc "Unstructured P--C--"
@@ -101,55 +92,4 @@ pLabel = manyTill1 anyChar (try trail)
 
 pProc :: Parser String
 pProc = manyTill1 anyChar (try trail)
-
---statement :: Parser Stmt
---statement = try branchStatement
---        <|> fallStatement
---
---branchStatement :: Parser Stmt
---branchStatement = try ifStatement
---              <|> try unlessStatement
---	      <|> whicheverStatement
---
---ifStatement :: Parser Stmt
---ifStatement = do
---  void $ string "__GOTO_IF__"
---  space1
---  yes <- label
---  void $ char ':'
---  spaces
---  act <- action
---  return $ Branch (Just yes) Nothing act
---
---unlessStatement :: Parser Stmt
---unlessStatement = do
---  void $ string "__GOTO_UNLESS__"
---  space1
---  no <- label
---  void $ char ':'
---  spaces
---  act <- action
---  return $ Branch Nothing (Just no) act
---
---whicheverStatement :: Parser Stmt
---whicheverStatement = do
---  void $ string "__GOTO__"
---  space1
---  yes <- label
---  void $ char ':'
---  spaces
---  no  <- label
---  void $ char ':'
---  spaces
---  act <- action
---  return $ Branch (Just yes) (Just no) act
---
---fallStatement :: Parser Stmt
---fallStatement = Branch Nothing Nothing `liftM` action
---
---action :: Parser String
---action = many1 (noneOf "\r\n")
---
---label :: Parser String
---label = many (noneOf ":\r\n")
 
