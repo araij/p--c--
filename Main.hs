@@ -5,10 +5,10 @@ module Main where
 import Data.Maybe (fromMaybe)
 import System.Console.CmdArgs
 import System.FilePath (takeBaseName)
-import Dot (digraphToStr)
-import UpcToDot (upcToDigraph, upcPatentConfig, upcConfig0)
-import P_C (parseP_C)
-import P_CToUpc (p_CToUpc)
+import Dot as D (compile)
+import Upc as U (compile, patentConfig, config0)
+import P_C as P (compile)
+import P_CParser (parseP_C)
 
 data Option = Option { opPatent  :: Bool
 		     , opOutFile :: Maybe String
@@ -24,7 +24,7 @@ option = Option { opPatent = False
 		, opOutFile = Nothing
 		    &= help "Output file name"
 		    &= explicit
-		    &= name "out"
+		    &= name "output"
 		    &= name "o"
 		    &= typFile
 		, opInFile = def
@@ -38,11 +38,11 @@ main = do
   op <- cmdArgs option
   let infile  = opInFile op
   let outfile = fromMaybe (takeBaseName infile ++ ".dot") $ opOutFile op
-  let upcCfg  = if opPatent op then upcPatentConfig else upcConfig0
+  let upcCfg  = if opPatent op then U.patentConfig else U.config0
   src <- readFile infile
-  writeFile outfile $ digraphToStr
-		    $ upcToDigraph upcCfg
-		    $ p_CToUpc
+  writeFile outfile $ D.compile
+		    $ U.compile upcCfg
+		    $ P.compile
 		    $ fromRight
 		    $ parseP_C src
   where

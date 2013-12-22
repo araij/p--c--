@@ -1,5 +1,5 @@
 EXECS   = p-c Test
-HSFLAGS = -Wall
+HSFLAGS = -Wall -O
 SRCS    = $(wildcard *.hs)
 
 all: $(EXECS)

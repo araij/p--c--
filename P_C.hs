@@ -1,135 +1,58 @@
 module P_C where
 
-import Control.Monad (liftM, void)
-import Control.Applicative ((<$))
-import Text.Parsec (manyTill, between, lookAhead, anyChar, string, (<|>), parse, try, many, spaces,
-                    eof)
-import Text.Parsec.String (Parser)
-import Text.Parsec.Error (ParseError)
-import ParserUtil
+import P_CParser as P
+import UpcParser as U
+import Control.Monad.State
+import Text.Printf (printf)
 
--- p_c_program ::= (statement)+
--- statement   ::= if_statement
---               | while_statement
---               | repeat_statement
--- if_statement ::= if expression then (statement)+ else (statement)+ end
---                | if expression then (statement)+ end
--- while_statement ::= while expression do (statement)+ end
--- repeat_statement ::= repeat (statement)+ until expression
--- if         ::= "\n\s*if\s+"
--- then       ::= "\s+then\s*\n"
--- while      ::= "\n\s*while\s+"
--- repeat     ::= "\n\s*repeat\s*\n"
--- until      ::= "\n\s*until\s+"
--- do         ::= "\s+do\s*\n"
--- end        ::= "\n\s*end\s*\n"
--- expression ::= ("([^\n])\\\n\s*" ==> \1) ++ expression
---              | ("([^\n])\\\n" ==> \1)
+data CtxData = CtxData { cdNLabel :: Int }
+type CtxState a = State CtxData a
 
-data P_CProg = P_CProg [Stmt]
-  deriving (Show, Eq)
+compile :: P_CProg -> UpcProg
+compile (P_CProg ss) =
+  let s0 = CtxData { cdNLabel = 0 }
+  in U.UpcProg $ concat $ evalState (mapM cStmt ss) s0 
 
-data Stmt = SIfThen String [Stmt]
-          | SIfThenElse String [Stmt] [Stmt]
-	  | SWhile String [Stmt]
-	  | SRepeat [Stmt] String
-	  | SProc String
-  deriving (Show, Eq)
+cStmt :: P.Stmt -> CtxState [U.Stmt]
+cStmt (SIfThen cond ys) = do
+  lend <- genLabel
+  ys'  <- concatMapM cStmt ys
+  return $ [ SBranch cond Nothing (Just lend) ]
+           ++ ys'
+           ++ [ SLabel lend ]
+cStmt (SIfThenElse cond ys ns) = do
+  lelse <- genLabel
+  lend  <- genLabel
+  ys'   <- concatMapM cStmt ys
+  ns'   <- concatMapM cStmt ns
+  return $ [ SBranch cond Nothing (Just lelse) ]
+           ++ ys'
+           ++ [ SGoto lend
+              , SLabel lelse ]
+           ++ ns'
+           ++ [ SLabel lend ]
+cStmt (SWhile cond ss) = do
+  lend <- genLabel
+  ss'  <- concatMapM cStmt ss
+  return $ [ SBranch cond Nothing (Just lend) ]
+           ++ ss'
+           ++ [ SLabel lend ]
+cStmt (SRepeat ss cond) = do
+  lbeg <- genLabel
+  ss'  <- concatMapM cStmt ss
+  return $ [ SLabel lbeg ]
+           ++ ss'
+           ++ [ SBranch cond Nothing (Just lbeg) ]
+cStmt (SProc p) = do
+  return $ [ SBranch p Nothing Nothing ]
 
-parseP_C :: String -> Either ParseError P_CProg
-parseP_C = parse pP_CProg "P--C-- Program" . ('\n' :)
+genLabel :: CtxState String
+genLabel = do
+  s <- get
+  let nl = cdNLabel s
+  put $ s { cdNLabel = nl + 1 }
+  return $ printf "L%06d" nl
 
-pP_CProg :: Parser P_CProg
-pP_CProg = do
-  ss <- many (try pStat)
-  spaces
-  eof
-  return $ P_CProg ss
-
-pStat :: Parser Stmt
-pStat = try pIfThen
-    <|> try pWhileDo
-    <|> try pRepeatUntil
-    <|> pProc
-
-pIfThen :: Parser Stmt
-pIfThen = do
-  cond <- between pIf pThen pExp
-  yes  <- manyTill pStat $ lookAhead (try pElse <|> try pEnd)
-  (SIfThen cond yes <$ try pEnd) <|> (SIfThenElse cond yes `liftM` elseClause)
-  where
-    elseClause = pElse >> manyTill pStat (try pEnd)
-
-pWhileDo :: Parser Stmt
-pWhileDo = do
-  cond <- between pWhile pDo pExp
-  ss   <- manyTill pStat $ try pEnd
-  return $ SWhile cond ss
-
-pRepeatUntil :: Parser Stmt
-pRepeatUntil = do
-  pRepeat
-  ss   <- manyTill pStat $ try pUntil
-  cond <- pExp
-  return $ SRepeat ss cond
-
-pProc :: Parser Stmt
-pProc = spaces >> (SProc `liftM` pExp)
-
-pExp :: Parser String
-pExp = manyTill1 anyChar (lookAhead (try expEnd))
-  where
-    expEnd = try pThen <|> try pDo <|> try (spacesLn >> eol) <|> (spacesLn >> eof)
-
---
--- matches "\n\s+<string>\s+"
---
-lineHead :: String -> Parser String
-lineHead t = do
-  eol
-  spaces
-  s <- string t
-  space1 <|> eof
-  return s
-
---
--- matches "\s+<string>\s*\n"
---
-lineTail :: String -> Parser String
-lineTail t = do
-  space1
-  s <- string t
-  spacesLn
-  lookAhead (eol <|> eof)
-  return s
-
-----
----- from http://d.hatena.ne.jp/kazu-yamamoto/20110131/1296466529
-----
---appear :: Parser a -> Parser [a]
---appear p = foldr ($) [] <$> many ((:) <$> try p <|> flip const <$> anyChar)
-
-pIf :: Parser ()
-pIf = void $ lineHead "if"
-
-pThen :: Parser ()
-pThen = void $ lineTail "then"
-
-pElse :: Parser ()
-pElse = void $ lineHead "else"
-
-pWhile :: Parser ()
-pWhile = void $ lineHead "while"
-
-pRepeat :: Parser ()
-pRepeat = void $ lineHead "repeat"
-
-pUntil :: Parser ()
-pUntil = void $ lineHead "until"
-
-pDo :: Parser ()
-pDo = void $ lineTail "do"
-
-pEnd :: Parser ()
-pEnd = void $ lineHead "end"
+concatMapM :: Monad m => (a -> m [b]) -> [a] -> m [b]
+concatMapM f xs = concat `liftM` mapM f xs
 

@@ -38,8 +38,8 @@ nodeAttr0 = NodeAttr Nothing Nothing
 edgeAttr0 :: EdgeAttr
 edgeAttr0 = EdgeAttr Nothing
 
-digraphToStr :: Digraph -> String
-digraphToStr (Digraph name _ ns es _) =
+compile :: Digraph -> String
+compile (Digraph name _ ns es _) =
   concat $ intersperse "\n" $
     ["digraph " ++ name ++ " {"]
     ++ ["  " ++ nodeToStr n ++ ";" | n <- ns]
