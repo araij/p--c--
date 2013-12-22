@@ -1,12 +1,12 @@
 module P_C where
 
 import Control.Monad (liftM, void)
-import Control.Applicative ((<$>), (<$))
-import Text.Parsec (manyTill, between, lookAhead, anyChar, char, string, noneOf, (<|>), parse, try, many, many1, space, spaces, eof, endBy)
+import Control.Applicative ((<$))
+import Text.Parsec (manyTill, between, lookAhead, anyChar, string, (<|>), parse, try, many, spaces,
+                    eof)
 import Text.Parsec.String (Parser)
 import Text.Parsec.Error (ParseError)
 import ParserUtil
-import Debug.Trace (trace)
 
 -- p_c_program ::= (statement)+
 -- statement   ::= if_statement
@@ -26,13 +26,13 @@ import Debug.Trace (trace)
 -- expression ::= ("([^\n])\\\n\s*" ==> \1) ++ expression
 --              | ("([^\n])\\\n" ==> \1)
 
-data P_CProg = P_CProg [Stat]
+data P_CProg = P_CProg [Stmt]
   deriving (Show, Eq)
 
-data Stat = SIfThen String [Stat]
-          | SIfThenElse String [Stat] [Stat]
-	  | SWhile String [Stat]
-	  | SRepeat [Stat] String
+data Stmt = SIfThen String [Stmt]
+          | SIfThenElse String [Stmt] [Stmt]
+	  | SWhile String [Stmt]
+	  | SRepeat [Stmt] String
 	  | SProc String
   deriving (Show, Eq)
 
@@ -46,13 +46,13 @@ pP_CProg = do
   eof
   return $ P_CProg ss
 
-pStat :: Parser Stat
+pStat :: Parser Stmt
 pStat = try pIfThen
     <|> try pWhileDo
     <|> try pRepeatUntil
     <|> pProc
 
-pIfThen :: Parser Stat
+pIfThen :: Parser Stmt
 pIfThen = do
   cond <- between pIf pThen pExp
   yes  <- manyTill pStat $ lookAhead (try pElse <|> try pEnd)
@@ -60,20 +60,20 @@ pIfThen = do
   where
     elseClause = pElse >> manyTill pStat (try pEnd)
 
-pWhileDo :: Parser Stat
+pWhileDo :: Parser Stmt
 pWhileDo = do
   cond <- between pWhile pDo pExp
   ss   <- manyTill pStat $ try pEnd
   return $ SWhile cond ss
 
-pRepeatUntil :: Parser Stat
+pRepeatUntil :: Parser Stmt
 pRepeatUntil = do
   pRepeat
   ss   <- manyTill pStat $ try pUntil
   cond <- pExp
   return $ SRepeat ss cond
 
-pProc :: Parser Stat
+pProc :: Parser Stmt
 pProc = spaces >> (SProc `liftM` pExp)
 
 pExp :: Parser String
@@ -130,5 +130,6 @@ pUntil = void $ lineHead "until"
 pDo :: Parser ()
 pDo = void $ lineTail "do"
 
+pEnd :: Parser ()
 pEnd = void $ lineHead "end"
 
