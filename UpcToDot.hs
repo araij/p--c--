@@ -17,7 +17,7 @@ upcPatentConfig :: UpcConfig
 upcPatentConfig = UpcConfig { ucRelabel = Just patentLabel }
 
 patentLabel :: Int -> String -> String
-patentLabel ix l = printf "S%04d: %s" (ix * 100) l
+patentLabel ix l = printf "S%04d: %s" ((ix + 1) * 100) l
 
 upcToDigraph :: UpcConfig -> UpcProg -> Digraph
 upcToDigraph cfg (UpcProg stmts) =
