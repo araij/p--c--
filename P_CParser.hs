@@ -42,7 +42,7 @@ pStat :: Parser Stmt
 pStat = try pIfThen
     <|> try pWhileDo
     <|> try pRepeatUntil
-    <|> SProc `liftM` (pExp trail)
+    <|> liftM SProc (pExp trail)
 
 pIfThen :: Parser Stmt
 pIfThen = do
@@ -65,11 +65,16 @@ pRepeatUntil = do
   cond <- pExp trail
   return $ SRepeat ss cond
 
-trail :: Parser ()
-trail = spacesLn >> (eof <|> eol)
-
+--
+-- an expression ends with `end`
+-- `end` is not consumed
+--
 pExp :: Parser a -> Parser String
-pExp end = spaces >> manyTill1 anyChar (lookAhead (try end))
+pExp end = do
+  spaces
+  hd <- manyTill1 anyChar (lookAhead (void (try end) <|> try trail))
+  tl <- (lookAhead (try end) >> return "") <|> (trail >> liftM ('\n' :) (pExp end))
+  return (hd ++ tl)
 
 --
 -- matches "\n\s+<string>\s+"
@@ -116,4 +121,7 @@ pDo = void $ lineTail "do"
 
 pEnd :: Parser ()
 pEnd = void $ lineHead "end"
+
+trail :: Parser ()
+trail = spacesLn >> (eof <|> eol)
 
