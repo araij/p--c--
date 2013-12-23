@@ -3,7 +3,7 @@ P--C-- Compiler
 
 疑似コードからフローチャートを生成します。
 
-入力は P--C-- という言語で与えます。P--C-- の意味は Pseudo Code であり、P~~AS~~C~~AL~~でもあります（今はむしろ Ruby に似ていますが）。 出力は Dot 言語なので、Graphviz を使って画像化してください。
+入力は P--C-- という言語で与えます。P--C-- の意味は Pseudo Code であり、P<s>AS</s>C<s>AL</s>でもあります（今はむしろ Ruby に似ていますが）。 出力は Dot 言語なので、Graphviz を使って画像化してください。
 
 ビルド
 ------
@@ -27,16 +27,16 @@ P--C-- Compiler
     d(s) ← 0．s 以外の各 v ∈ V に対し，d(v) ← ∞
     各 v ∈ V に対し，w[v] ←「無し」
     while V - H ≠ ∅ do
-	u ← d(v) が最少となる頂点
-	(u, w[u]) を出力
-	H ← H ∪ {u}
-	V' ← u からの辺がある各 v ∈ V - H
-	while V' にまだ訪ねていない頂点 v がある do
-	    if d(v) > d(u) + length(u, v) then
-		d(v) ← d(u) + length(u, v)
-		w[v] ← u
-	    end
-	end
+        u ← d(v) が最少となる頂点
+        (u, w[u]) を出力
+        H ← H ∪ {u}
+        V' ← u からの辺がある各 v ∈ V - H
+        while V' にまだ訪ねていない頂点 v がある do
+            if d(v) > d(u) + length(u, v) then
+                d(v) ← d(u) + length(u, v)
+                w[v] ← u
+            end
+        end
     end
 
 make でできた実行可能ファイル `p-c` を使って Dot 言語ファイル dijkstra.dot へ変換します。
