@@ -1,9 +1,8 @@
 module P_CParser where
 
 import Control.Monad (liftM, void)
-import Control.Applicative ((<$))
-import Text.Parsec (manyTill, between, lookAhead, anyChar, string, (<|>), parse, try, many, spaces,
-                    eof)
+import Control.Applicative ((<$), (<$>))
+import Text.Parsec (manyTill, lookAhead, anyChar, string, (<|>), parse, try, many, spaces, eof)
 import Text.Parsec.String (Parser)
 import Text.Parsec.Error (ParseError)
 import ParserUtil
@@ -11,12 +10,10 @@ import ParserUtil
 -- p_c_program ::= (<statement>)+
 -- statement   ::= <if_statement>
 --               | <while_statement>
---               | <repeat_statement>
 --               | <expression>
 -- if_statement ::= if <expression> then (<statement>)+ else (<statement>)+ end
 --                | if <expression> then (<statement>)+ end
 -- while_statement ::= while <expression> do (<statement>)+ end
--- repeat_statement ::= repeat (<statement>)+ until <expression>
 
 data P_CProg = P_CProg [Stmt]
   deriving (Show, Eq)
@@ -24,7 +21,6 @@ data P_CProg = P_CProg [Stmt]
 data Stmt = SIfThen String [Stmt]
           | SIfThenElse String [Stmt] [Stmt]
 	  | SWhile String [Stmt]
-	  | SRepeat [Stmt] String
 	  | SProc String
   deriving (Show, Eq)
 
@@ -33,48 +29,48 @@ parseP_C = parse pP_CProg "P--C-- Program" . ('\n' :)
 
 pP_CProg :: Parser P_CProg
 pP_CProg = do
-  ss <- many (try pStat)
+  ss <- many (try pStmt)
   spaces
   eof
   return $ P_CProg ss
 
-pStat :: Parser Stmt
-pStat = try pIfThen
+pStmt :: Parser Stmt
+pStmt = try pIfThen
     <|> try pWhileDo
-    <|> try pRepeatUntil
-    <|> liftM SProc (pExp trail)
+    <|> pProc
 
 pIfThen :: Parser Stmt
 pIfThen = do
-  cond <- between pIf pThen $ pExp pThen
-  yes  <- manyTill pStat $ lookAhead (try pElse <|> try pEnd)
-  (SIfThen cond yes <$ try pEnd) <|> (SIfThenElse cond yes `liftM` elseClause)
+  pIf
+  cond <- pExpTo pThen
+  yes  <- manyTill pStmt $ lookAhead (try pElse <|> try pEnd)
+  (SIfThen cond yes <$ try pEnd) <|> (SIfThenElse cond yes <$> elseClause)
   where
-    elseClause = pElse >> manyTill pStat (try pEnd)
+    elseClause = pElse >> manyTill pStmt (try pEnd)
 
 pWhileDo :: Parser Stmt
 pWhileDo = do
-  cond <- between pWhile pDo $ pExp pDo
-  ss   <- manyTill pStat $ try pEnd
+  pWhile
+  cond <- pExpTo pDo
+  ss   <- manyTill pStmt $ try pEnd
   return $ SWhile cond ss
 
-pRepeatUntil :: Parser Stmt
-pRepeatUntil = do
-  pRepeat
-  ss   <- manyTill pStat $ try pUntil
-  cond <- pExp trail
-  return $ SRepeat ss cond
+pProc :: Parser Stmt
+pProc = SProc <$> pExpTo (lookAhead (try trail))
 
 --
 -- an expression ends with `end`
--- `end` is not consumed
+-- `end` is consumed
 --
-pExp :: Parser a -> Parser String
-pExp end = do
+pExpTo :: Parser a -> Parser String
+pExpTo end = do
   spaces
+  -- `hd` ends with appearance of `end` or newline
   hd <- manyTill1 anyChar (lookAhead (void (try end) <|> try trail))
-  tl <- (lookAhead (try end) >> return "") <|> (trail >> liftM ('\n' :) (pExp end))
-  return (hd ++ tl)
+  -- `tl` is empty if `hd` was ended with `end`
+  -- `tl` is an expression in following lines if `hd` was ended with newline
+  tl <- (try end >> return "") <|> (trail >> liftM ('\n' :) (pExpTo end))
+  return $ hd ++ tl
 
 --
 -- matches "\n\s+<string>\s+"
@@ -84,7 +80,7 @@ lineHead t = do
   eol
   spaces
   s <- string t
-  space1 <|> eof
+  lookAhead (space1 <|> eof)
   return s
 
 --
@@ -109,9 +105,6 @@ pElse = void $ lineHead "else"
 
 pWhile :: Parser ()
 pWhile = void $ lineHead "while"
-
-pRepeat :: Parser ()
-pRepeat = void $ lineHead "repeat"
 
 pUntil :: Parser ()
 pUntil = void $ lineHead "until"

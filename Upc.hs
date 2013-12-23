@@ -23,12 +23,14 @@ patentLabel ix l = printf "S%04d: %s" ((ix + 1) * 100) l
 compile :: UpcConfig -> UpcProg -> Digraph
 compile cfg (UpcProg stmts) =
   let (ns, lmap) = locate stmts
-      ns'        = maybe ns (flip relabel ns) (ucRelabel cfg)
-      es         = connect lmap stmts
       nstart     = Node "start" (nodeAttr0 { naLabel = Just "Start" })
       nend       = Node "end"   (nodeAttr0 { naLabel = Just "End" })
-      estart     = Edge "start" (nodeNameAt 0) edgeAttr0
-  in Digraph "flowchart" [] (nstart : ns' ++ [nend]) (estart : es) digraphAttr0
+      ns1        = maybe ns (flip relabel ns) (ucRelabel cfg)
+      ns2        = nstart : ns1 ++ [nend]
+      es         = connect lmap stmts
+      Node top _ = ns2 !! 1 -- length ns2 >= 2 because of `nstart` and `nend`
+      estart     = Edge "start" top edgeAttr0
+  in Digraph "flowchart" [] ns2 (estart : es) digraphAttr0
 
 relabel :: (Int -> String -> String) -> [Node] -> [Node]
 relabel f ns =

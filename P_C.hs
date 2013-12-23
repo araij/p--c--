@@ -32,17 +32,14 @@ cStmt (SIfThenElse cond ys ns) = do
            ++ ns'
            ++ [ SLabel lend ]
 cStmt (SWhile cond ss) = do
+  lbeg <- genLabel
   lend <- genLabel
   ss'  <- concatMapM cStmt ss
-  return $ [ SBranch cond Nothing (Just lend) ]
+  return $ [ SLabel lbeg
+           , SBranch cond Nothing (Just lend) ]
            ++ ss'
-           ++ [ SLabel lend ]
-cStmt (SRepeat ss cond) = do
-  lbeg <- genLabel
-  ss'  <- concatMapM cStmt ss
-  return $ [ SLabel lbeg ]
-           ++ ss'
-           ++ [ SBranch cond Nothing (Just lbeg) ]
+           ++ [ SGoto lbeg
+              , SLabel lend ]
 cStmt (SProc p) = do
   return $ [ SBranch p Nothing Nothing ]
 
