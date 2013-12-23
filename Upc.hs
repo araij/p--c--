@@ -1,6 +1,7 @@
 module Upc where
 
 import Data.Map as M (Map, empty, insert, lookup)
+import Data.Char (isControl, showLitChar)
 import Text.Printf (printf)
 import UpcParser
 import Dot
@@ -34,12 +35,18 @@ relabel f ns =
   [Node n (a { naLabel = Just (f ix l) })
     | (Node n a@(NodeAttr { naLabel = Just l }), ix) <- zip ns [0 ..]]
 
+showLitString :: String -> String
+showLitString []                     = []
+showLitString ('\"' : cs)            = "\\\"" ++ showLitString cs
+showLitString (c : cs) | isControl c = showLitChar c $ showLitString cs
+showLitString (c : cs)               = c : showLitString cs
+
 locate :: [Stmt] -> ([Node], Map String Loc)
 locate = flip go ([], M.empty) . zip [0 ..]
   where
     go [] (ns, m) = (reverse ns, m)
     go ((ix, s@(SBranch p _ _)) : ss) (ns, m) =
-      let a = nodeAttr0 { naLabel = Just p, naShape = stmtShape s }
+      let a = nodeAttr0 { naLabel = Just (showLitString p), naShape = stmtShape s }
           n = Node (nodeNameAt ix) a
       in go ss (n : ns, m)
     go ((_, SGoto _)  : ss) (ns, m) = go ss (ns, m)

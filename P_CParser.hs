@@ -42,11 +42,11 @@ pStat :: Parser Stmt
 pStat = try pIfThen
     <|> try pWhileDo
     <|> try pRepeatUntil
-    <|> SProc `liftM` pExp
+    <|> SProc `liftM` (pExp trail)
 
 pIfThen :: Parser Stmt
 pIfThen = do
-  cond <- between pIf pThen pExp
+  cond <- between pIf pThen $ pExp pThen
   yes  <- manyTill pStat $ lookAhead (try pElse <|> try pEnd)
   (SIfThen cond yes <$ try pEnd) <|> (SIfThenElse cond yes `liftM` elseClause)
   where
@@ -54,7 +54,7 @@ pIfThen = do
 
 pWhileDo :: Parser Stmt
 pWhileDo = do
-  cond <- between pWhile pDo pExp
+  cond <- between pWhile pDo $ pExp pDo
   ss   <- manyTill pStat $ try pEnd
   return $ SWhile cond ss
 
@@ -62,13 +62,14 @@ pRepeatUntil :: Parser Stmt
 pRepeatUntil = do
   pRepeat
   ss   <- manyTill pStat $ try pUntil
-  cond <- pExp
+  cond <- pExp trail
   return $ SRepeat ss cond
 
-pExp :: Parser String
-pExp = spaces >> manyTill1 anyChar (lookAhead (try expEnd))
-  where
-    expEnd = try pThen <|> try pDo <|> try (spacesLn >> eol) <|> (spacesLn >> eof)
+trail :: Parser ()
+trail = spacesLn >> (eof <|> eol)
+
+pExp :: Parser a -> Parser String
+pExp end = spaces >> manyTill1 anyChar (lookAhead (try end))
 
 --
 -- matches "\n\s+<string>\s+"
